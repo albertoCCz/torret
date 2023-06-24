@@ -14,6 +14,25 @@ void print_v2(Vector2 v)
     printf("vector = (x = %f, y = %f)\n", v.x, v.y);
 }
 
+typedef enum Mode {
+    EDIT,
+    SEARCH
+} Mode;
+
+typedef struct ModeText {
+    char *title;
+    int font_size;
+    int title_len;
+} ModeText;
+
+
+#define MODE_TXT(MODE) \
+    { \
+        .title = #MODE " mode", \
+        .font_size = 20, \
+        .title_len = MeasureText((const char *) #MODE " mode", 20) \
+    };
+
 typedef struct Grid {
     int x;
     int y;
@@ -116,7 +135,7 @@ void draw_grid_state(Grid grid)
 
     char c = (char) 255;
     char a = (char) 255;
-    
+
     for (size_t i = 0; i < grid.grid_size*grid.grid_size; ++i) {
         if (0 < grid.state[i]) {
             index_to_tile(&tile_selected, grid, i);
@@ -137,11 +156,25 @@ void draw_grid(Grid grid)
 
 void change_tile_state(Vector2 tile, Grid *grid)
 {
-    size_t tile_index;
-    tile_to_index(&tile_index, *grid, tile);
+    if (tile.x != -1 && tile.y != -1) {
+        size_t tile_index;
+        tile_to_index(&tile_index, *grid, tile);
 
-    if (grid->state[tile_index] <= 0) grid->state[tile_index] = 1;
-    else grid->state[tile_index] = 0;
+        if (grid->state[tile_index] <= 0) grid->state[tile_index] = 1;
+        else grid->state[tile_index] = 0;
+    }
+}
+
+void print_tile_state(Grid grid)
+{
+    printf("\n");
+    for (size_t y = 0; y < grid.grid_size; ++y) {
+        for (size_t x = 0; x < grid.grid_size; ++x) {
+            printf("%d ", 0 < grid.state[y * grid.grid_size + x]);
+        }
+        printf("\n");
+    }
+    printf("\n");
 }
 
 int main(void)
@@ -152,11 +185,8 @@ int main(void)
     int height = 9*factor;
     InitWindow(width, height, "ray-platformer");
 
-    // setup grid
-    int state[GRID_SIZE];
-    for (int i = 0; i < GRID_SIZE; i++) {
-        state[i] = 0;
-    }
+    // main objects
+    int state[GRID_SIZE * GRID_SIZE] = {0};
     Grid grid = {
         .x = 0,
         .y = 0,
@@ -166,10 +196,17 @@ int main(void)
         .grid_thick = 1,
         .state = state
     };
-
-    // other declarations
     int mouse_x, mouse_y;
     Vector2 tile_selected;
+
+    // MODES
+    // edit map mode
+    int edit_mode = 0;
+    ModeText edit_mt = MODE_TXT(EDIT);
+    
+    // search mode
+    int search_mode = 0;
+    ModeText search_mt = MODE_TXT(SEARCH);
 
     // event loop
     while(!WindowShouldClose())
@@ -179,16 +216,24 @@ int main(void)
         BeginDrawing();
             ClearBackground(BLUE);
             draw_grid(grid);
+            if (edit_mode == 1) {
+                DrawText(edit_mt.title, width/2 - edit_mt.title_len/2, 0, edit_mt.font_size, GREEN);
+            }
+            if (search_mode == 1) {
+                DrawText(search_mt.title, width/2 - search_mt.title_len/2, 0, search_mt.font_size, GREEN);
+            }
         EndDrawing();
- 
-        // if click on grid tile, change tile state
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)
-            && grid.x <= mouse_x && mouse_x < grid.x + grid.width
-            && grid.y <= mouse_y && mouse_y < grid.y + grid.height) {
+
+        // INPUT
+        // if in edit mode and click on grid tile, change tile state
+        if (edit_mode && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 get_tile_selected(&tile_selected, grid);
                 change_tile_state(tile_selected, &grid);
         }
 
+        // activate/deactivate modes
+        if (IsKeyPressed(KEY_S)) search_mode = (search_mode + 1) % 2; // alternate between 0 and 1 each time
+        if (IsKeyPressed(KEY_E)) edit_mode = (edit_mode + 1) % 2;
     }
 
     CloseWindow();
