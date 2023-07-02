@@ -4,7 +4,6 @@
 #include <assert.h>
 
 #include <raylib.h>
-#include "search.h"
 
 // #define DEBUG
 
@@ -183,7 +182,6 @@ void set_search_tile(Tile *start_tile, Tile *end_tile, Tile tile_selected, Grid 
         if (start_tile->x < 0 && start_tile->y < 0) {
             // if end not set -> set start
             if (end_tile->x < 0 && end_tile->y < 0) {
-                printf("start not set end not set\n");
                 start_tile->x = tile_selected.x;
                 start_tile->y = tile_selected.y;
                 grid->state[tile_to_index(*grid, *start_tile)] = PATH_START;
@@ -194,12 +192,10 @@ void set_search_tile(Tile *start_tile, Tile *end_tile, Tile tile_selected, Grid 
         } else {
             // if end not set -> set end
             if (end_tile->x < 0 && end_tile->y < 0) {
-                printf("start set end not set\n");
                 end_tile->x = tile_selected.x;
                 end_tile->y = tile_selected.y;
                 grid->state[tile_to_index(*grid, *end_tile)] = PATH_END;
             } else { // set start && unset end
-                printf("start set end set\n");
                 start_tile->x = tile_selected.x;
                 start_tile->y = tile_selected.y;
                 grid->state[tile_to_index(*grid, *start_tile)] = PATH_START;
@@ -293,8 +289,6 @@ int main(void)
         if (search_mode && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             get_tile_selected(&tile_selected, grid);
             set_search_tile(&start_tile, &end_tile, tile_selected, &grid);
-            printf("Start tile: %f, %f\n", start_tile.x, start_tile.y);
-            printf("End tile: %f, %f\n", end_tile.x, end_tile.y);
         }
 
         // activate/deactivate modes
