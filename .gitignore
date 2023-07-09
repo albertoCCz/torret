@@ -1,2 +1,9 @@
+.DS_Store
 .vscode
+.python-version
+
+env
+__pycache__
+
 main
+search
