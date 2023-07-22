@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#define MAX_HEAP_IMP <
+#define MIN_HEAP_IMP >
+#define HEAP_IMP MIN_HEAP_IMP // choose the heap implementation
+
 #define SEED 2342343
 #define heap_parent_index(index) ((index - 1) / 2) >= 0 ? (index - 1) / 2 : index
 
@@ -37,7 +41,7 @@ void enforce_heap_condition(int *heap, size_t index)
 {
     size_t parent_index = heap_parent_index(index);
     int temp;
-    while ((heap[parent_index] > heap[index]) && (0 < index)) {
+    while ((heap[parent_index] HEAP_IMP heap[index]) && (0 < index)) {
         swap_array_values(heap, parent_index, index);
 
         index = parent_index;
