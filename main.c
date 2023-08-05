@@ -1,13 +1,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <assert.h>
 
 #include <raylib.h>
 
 // #define DEBUG
 
-#define GRID_SIZE 10
+#define GRID_SIZE 40 // bug: when GRID_SIZE = 50 grid_lines
+                     // do not match with tiles and break
 
 void print_v2(Vector2 v)
 {
@@ -15,9 +17,13 @@ void print_v2(Vector2 v)
 }
 
 typedef enum Mode {
+    NONE,
     EDIT,
-    SEARCH
+    PATH
 } Mode;
+
+// current_mode global
+Mode current_mode;
 
 typedef struct ModeText {
     char *title;
@@ -33,6 +39,14 @@ typedef struct ModeText {
         .title_len = MeasureText((const char *) #MODE " mode", 20) \
     };
 
+
+typedef enum TileState {
+    WALL,
+    NORMAL,
+    PATH_START,
+    PATH_END
+} TileState;
+
 typedef struct Grid {
     int x;
     int y;
@@ -40,7 +54,7 @@ typedef struct Grid {
     int height;
     size_t grid_size;
     size_t grid_thick;
-    int *state;
+    TileState *state;
 } Grid;
 
 void draw_grid_lines(Grid grid, Color color)
@@ -61,14 +75,12 @@ void draw_grid_lines(Grid grid, Color color)
     }
 }
 
-typedef enum TileState {
-    WALL,
-    NORMAL,
-    PATH_START,
-    PATH_END
-} TileState;
-
 typedef Vector2 Tile;
+
+bool tile_equals(Tile t1, Tile t2)
+{
+    return (t1.x == t2.x && t1.y == t2.y);
+}
 
 void get_tile_selected(Tile *tile, Grid grid)
 {
@@ -137,7 +149,6 @@ size_t tile_to_index(Grid grid, Tile tile)
 
 void draw_grid_state(Grid grid)
 {
-    // TODO: properly handle drawing based on TileState
     int selection_width = grid.width / grid.grid_size;
     int selection_height = grid.height / grid.grid_size;
 
@@ -145,15 +156,28 @@ void draw_grid_state(Grid grid)
 
     char c = (char) 255;
     char a = (char) 255;
-
+    Color tile_color;
+    
     for (size_t i = 0; i < grid.grid_size*grid.grid_size; ++i) {
-        if (0 < grid.state[i]) {
-            index_to_tile(&tile_selected, grid, i);
-            DrawRectangle(tile_selected.x * selection_width + grid.x,
-                          tile_selected.y * selection_height + grid.y,
-                          selection_width - 1, selection_height - 1,
-                          (Color) { .r=c, .g=c, .b=c, .a=a });
-        }
+	switch (grid.state[i]) {
+	case (WALL):
+	    tile_color = BLUE;		
+	    break;
+	case (NORMAL):
+	    tile_color = WHITE;
+	    break;
+	case (PATH_START):
+	    tile_color = GREEN;
+	    break;
+	case (PATH_END):
+	    tile_color = RED;
+	    break;
+	}
+	index_to_tile(&tile_selected, grid, i);
+	DrawRectangle(tile_selected.x * selection_width + grid.x,
+		      tile_selected.y * selection_height + grid.y,
+		      selection_width - 1, selection_height - 1,
+		      tile_color);
     }
 }
 
@@ -169,44 +193,65 @@ void change_tile_state(Tile tile, Grid *grid)
     if (tile.x != -1 && tile.y != -1) {
         size_t tile_index = tile_to_index(*grid, tile);
 
-        if (grid->state[tile_index] <= 0) grid->state[tile_index] = 1;
-        else grid->state[tile_index] = 0;
+	//grid->state[tile_index] = PATH_START;
+        if (grid->state[tile_index] == WALL) grid->state[tile_index] = NORMAL;
+        else grid->state[tile_index] = WALL;
     }
 }
 
 void set_search_tile(Tile *start_tile, Tile *end_tile, Tile tile_selected, Grid *grid)
 {
-    // if tile_selected is valid tile
-    if (grid->state[tile_to_index(*grid, tile_selected)] != WALL) {
-        // if start not set
-        if (start_tile->x < 0 && start_tile->y < 0) {
-            // if end not set -> set start
-            if (end_tile->x < 0 && end_tile->y < 0) {
-                start_tile->x = tile_selected.x;
-                start_tile->y = tile_selected.y;
-                grid->state[tile_to_index(*grid, *start_tile)] = PATH_START;
-            } else {
-                fprintf(stderr, "Error: 'End' tile can't be set if 'Start' tile isn't set.");
-                exit(1);
-            }
-        } else {
-            // if end not set -> set end
-            if (end_tile->x < 0 && end_tile->y < 0) {
-                end_tile->x = tile_selected.x;
-                end_tile->y = tile_selected.y;
-                grid->state[tile_to_index(*grid, *end_tile)] = PATH_END;
-            } else { // set start && unset end
-                start_tile->x = tile_selected.x;
-                start_tile->y = tile_selected.y;
-                grid->state[tile_to_index(*grid, *start_tile)] = PATH_START;
+    if (current_mode == EDIT) {
+	if (tile_equals(tile_selected, *start_tile)) {
+	    grid->state[tile_to_index(*grid, *start_tile)] = NORMAL;
+	    grid->state[tile_to_index(*grid, *end_tile)] = NORMAL;
+	    
+	    // unset start and end tiles
+	    start_tile->x = -1;
+	    start_tile->y = -1;
 
-                end_tile->x = -1;
-                end_tile->y = -1;
-                grid->state[tile_to_index(*grid, *end_tile)] = NORMAL;
-            }
-        }
-    } else {
-        printf("Selected tile is not a valid search tile!\n");
+	    end_tile->x = -1;
+	    end_tile->y = -1;
+	} else if (tile_equals(tile_selected, *end_tile)) {
+	    grid->state[tile_to_index(*grid, *end_tile)] = NORMAL;
+	    
+	    // unset end tile
+	    end_tile->x = -1;
+	    end_tile->y = -1;
+	}
+    } else if (current_mode == PATH) {
+	// if tile_selected is valid tile
+	if (grid->state[tile_to_index(*grid, tile_selected)] != WALL) {
+	    // if start not set
+	    if (start_tile->x < 0 && start_tile->y < 0) {
+		// if end not set -> set start
+		if (end_tile->x < 0 && end_tile->y < 0) {
+		    start_tile->x = tile_selected.x;
+		    start_tile->y = tile_selected.y;
+		    grid->state[tile_to_index(*grid, *start_tile)] = PATH_START;
+		} else {
+		    fprintf(stderr, "Error: 'End' tile can't be set if 'Start' tile isn't set.");
+		    exit(1);
+		}
+	    } else {
+		// if end not set -> set end
+		if (end_tile->x < 0 && end_tile->y < 0) {
+		    end_tile->x = tile_selected.x;
+		    end_tile->y = tile_selected.y;
+		    grid->state[tile_to_index(*grid, *end_tile)] = PATH_END;
+		} else { // set start && unset end
+		    start_tile->x = tile_selected.x;
+		    start_tile->y = tile_selected.y;
+		    grid->state[tile_to_index(*grid, *start_tile)] = PATH_START;
+
+		    end_tile->x = -1;
+		    end_tile->y = -1;
+		    grid->state[tile_to_index(*grid, *end_tile)] = NORMAL;
+		}
+	    }
+	} else {
+	    printf("Selected tile is not a valid search tile!\n");
+	}
     }
 }
 
@@ -215,7 +260,20 @@ void print_grid_state(Grid grid)
     printf("\n");
     for (size_t y = 0; y < grid.grid_size; ++y) {
         for (size_t x = 0; x < grid.grid_size; ++x) {
-            printf("%d ", 0 < grid.state[y * grid.grid_size + x]);
+	    switch (grid.state[x + grid.grid_size * y]) {
+	    case (WALL):
+		printf("W ");
+		break;
+	    case (NORMAL):
+		printf("N ");
+		break;
+	    case (PATH_START):
+		printf("S ");
+		break;
+	    case (PATH_END):
+		printf("E ");
+		break;
+	    }
         }
         printf("\n");
     }
@@ -229,10 +287,11 @@ int main(void)
     int width = 16*factor;
     int height = 9*factor;
     SetTargetFPS(60);
-    InitWindow(width, height, "ray-platformer");
+    InitWindow(width, height, "Torret");
 
     // main objects
-    int state[GRID_SIZE * GRID_SIZE] = {0};
+    TileState *state = calloc(GRID_SIZE * GRID_SIZE, sizeof(TileState));
+    memset(state, WALL, sizeof(state)/sizeof(state[0]));
     Grid grid = {
         .x = 0,
         .y = 0,
@@ -247,12 +306,10 @@ int main(void)
 
     // MODES
     // edit map mode
-    int edit_mode = 0;
     ModeText edit_mt = MODE_TXT(EDIT);
     
     // search mode
-    int search_mode = 0;
-    ModeText search_mt = MODE_TXT(SEARCH);
+    ModeText path_mt = MODE_TXT(PATH);
     Tile start_tile = {
         .x = -1,
         .y = -1
@@ -265,37 +322,45 @@ int main(void)
     // event loop
     while(!WindowShouldClose())
     {
-        mouse_x = GetMouseX();
+      	mouse_x = GetMouseX();
         mouse_y = GetMouseY();
         BeginDrawing();
             ClearBackground(BLUE);
             draw_grid(grid);
-            if (edit_mode == 1) {
+            if (current_mode == EDIT) {
                 DrawText(edit_mt.title, width/2 - edit_mt.title_len/2, 0, edit_mt.font_size, GREEN);
             }
-            if (search_mode == 1) {
-                DrawText(search_mt.title, width/2 - search_mt.title_len/2, 0, search_mt.font_size, GREEN);
+            if (current_mode == PATH) {
+                DrawText(path_mt.title, width/2 - path_mt.title_len/2, 0, path_mt.font_size, GREEN);
             }
         EndDrawing();
 
         // INPUT
         // if in edit mode and click on grid tile, change tile state
-        if (edit_mode && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (current_mode == EDIT && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             get_tile_selected(&tile_selected, grid);
             change_tile_state(tile_selected, &grid);
+	    set_search_tile(&start_tile, &end_tile, tile_selected, &grid);
         }
 
         // if in search mode and click on grid tile, set target tile
-        if (search_mode && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (current_mode == PATH && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             get_tile_selected(&tile_selected, grid);
             set_search_tile(&start_tile, &end_tile, tile_selected, &grid);
         }
 
         // activate/deactivate modes
-        if (IsKeyPressed(KEY_S)) search_mode = (search_mode + 1) % 2; // alternate between 0 and 1 each time
-        if (IsKeyPressed(KEY_E)) edit_mode = (edit_mode + 1) % 2;
+        if (IsKeyPressed(KEY_P)) {
+	    if (current_mode == PATH) current_mode = NONE;
+	    else current_mode = PATH;   
+	}
+        if (IsKeyPressed(KEY_E)) {
+	    if (current_mode == EDIT) current_mode = NONE;
+	    else current_mode = EDIT;
+	}
     }
 
+    free(state);
     CloseWindow();
 
     return 0;
