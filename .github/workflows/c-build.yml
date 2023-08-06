@@ -26,7 +26,10 @@ jobs:
       id: cache-raylib
       uses: actions/cache@v3
       with:
-        path: /usr/local/lib
+        path: |
+          usr/local/lib/libraylib.so
+          usr/local/lib/libraylib.so.4.5.0
+          usr/local/lib/libraylib.so.450
         key: ${{ runner.os }}-raylib
       
     - name: build-raylib
