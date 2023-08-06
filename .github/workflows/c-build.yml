@@ -21,14 +21,27 @@ jobs:
     - name: install-libs
       run:  |
         sudo apt install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev
+        
+    - name: cache-raylib
+      id: cache-raylib
+      uses: actions/cache@v3
+      with:
+        path: /usr/local/lib
+        key: ${{ runner.os }}-raylib
 
+    - name: Generate Prime Numbers
+      if: steps.cache-raylib.outputs.cache-hit != 'true'
+      run: /generate-primes.sh -d prime-numbers
+      
     - name: build-raylib
+      if: steps.cache-raylib.outputs.cache-hit != 'true'
       run:  |
         git clone https://github.com/raysan5/raylib.git raylib
         cd raylib/src/
         make PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=SHARED # To make the dynamic shared version.
 
     - name: install-raylib
+      if: steps.cache-raylib.outputs.cache-hit != 'true'
       run:  |
         cd raylib/src/
         sudo make install RAYLIB_LIBTYPE=SHARED
@@ -40,7 +53,3 @@ jobs:
     - name: build
       run: |
         ./build/build-linux.sh
-
-    - name: clean-raylib
-      run:  |
-        rm -r raylib/
