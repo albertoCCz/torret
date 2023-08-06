@@ -27,9 +27,12 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          usr/local/lib/libraylib.so
-          usr/local/lib/libraylib.so.4.5.0
-          usr/local/lib/libraylib.so.450
+          /usr/local/lib/libraylib.so
+          /usr/local/lib/libraylib.so.4.5.0
+          /usr/local/lib/libraylib.so.450
+          /usr/local/include/raylib.h
+          /usr/local/include/raymath.h
+          /usr/local/include/rlgl.h
         key: ${{ runner.os }}-raylib
       
     - name: build-raylib
