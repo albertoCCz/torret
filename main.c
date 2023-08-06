@@ -31,14 +31,12 @@ typedef struct ModeText {
     int title_len;
 } ModeText;
 
-
 #define MODE_TXT(MODE) \
     { \
         .title = #MODE " mode", \
         .font_size = 20, \
         .title_len = MeasureText((const char *) #MODE " mode", 20) \
     };
-
 
 typedef enum TileState {
     WALL,
@@ -337,13 +335,42 @@ int main(void)
 
         // INPUT
         // if in edit mode and click on grid tile, change tile state
-        if (current_mode == EDIT && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            get_tile_selected(&tile_selected, grid);
-            change_tile_state(tile_selected, &grid);
-	    set_search_tile(&start_tile, &end_tile, tile_selected, &grid);
+        if (current_mode == EDIT) {
+	    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+		get_tile_selected(&tile_selected, grid);
+		change_tile_state(tile_selected, &grid);
+		set_search_tile(&start_tile, &end_tile, tile_selected, &grid);
+	    }
+
+	    //TODO: move saving map functionality to another modules
+	    if (IsKeyPressed(KEY_S)) {
+		FilePathList maps =  LoadDirectoryFilesEx("./maps", ".map", false);
+
+		printf("List of maps in ./maps/\n");
+		for (size_t i = 0; i < maps.count; ++i) {
+		    printf("    %s\n", maps.paths[i]);
+		}
+
+		const char* fileName = "./maps/map001.map";
+		FILE *file = fopen(fileName, "wb");
+
+		bool success;
+		unsigned int bytesToWrite = sizeof(grid.state)/sizeof(grid.state[0]);
+		if (file != NULL) {
+		    unsigned int count = (unsigned int)fwrite(grid.state, sizeof(unsigned char), bytesToWrite, file);
+
+		    if (count == 0) printf("FILEIO: [%s] Failed to write file\n", fileName);
+		    else if (count != bytesToWrite) printf("FILEIO: [%s] File partially written\n", fileName);
+		    else printf("FILEIO: [%s] File saved successfully\n", fileName);
+
+		    int result = fclose(file);
+		    if (result == 0) success = true;
+		}
+		else printf("FILEIO: [%s] Failed to open file\n", fileName);
+	    }
         }
 
-        // if in search mode and click on grid tile, set target tile
+        // If in search mode and click on grid tile, set target tile
         if (current_mode == PATH && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             get_tile_selected(&tile_selected, grid);
             set_search_tile(&start_tile, &end_tile, tile_selected, &grid);
