@@ -28,10 +28,6 @@ jobs:
       with:
         path: /usr/local/lib
         key: ${{ runner.os }}-raylib
-
-    - name: Generate Prime Numbers
-      if: steps.cache-raylib.outputs.cache-hit != 'true'
-      run: /generate-primes.sh -d prime-numbers
       
     - name: build-raylib
       if: steps.cache-raylib.outputs.cache-hit != 'true'
