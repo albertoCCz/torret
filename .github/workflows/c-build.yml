@@ -30,6 +30,7 @@ jobs:
 
     - name: install-raylib
       run:  |
+        cd raylib/src/
         sudo make install RAYLIB_LIBTYPE=SHARED
 
     - name: raylib-lib-path
