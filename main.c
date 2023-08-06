@@ -8,7 +8,7 @@
 
 // #define DEBUG
 
-#define GRID_SIZE 40 // bug: when GRID_SIZE = 50 grid_lines
+#define GRID_SIZE 25 // bug: when GRID_SIZE = 50 grid_lines
                      // do not match with tiles and break
 
 void print_v2(Vector2 v)
