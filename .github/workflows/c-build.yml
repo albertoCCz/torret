@@ -24,8 +24,8 @@ jobs:
     - name: build-raylib
       run:  |
         git clone https://github.com/raysan5/raylib.git raylib
-	cd raylib/src/	
-	make PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=SHARED # To make the dynamic shared version.
+        cd raylib/src/
+        make PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=SHARED # To make the dynamic shared version.
 
     - name: install-raylib
       run:  |
