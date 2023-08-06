@@ -1,3 +1,3 @@
 #!/bin/bash -x
 
-cc main.c -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -o main
+cc ../main.c -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -o ../bin/main-linux
