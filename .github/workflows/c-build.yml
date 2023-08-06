@@ -8,10 +8,37 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
+
+    - name: install-tools
+      run:  |
+        sudo apt install build-essential git
+
+    - name: install-libs
+      run:  |
+        sudo apt install libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev
+
+    - name: build-raylib
+      run:  |
+        git clone https://github.com/raysan5/raylib.git raylib
+	cd raylib/src/	
+	make PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=SHARED # To make the dynamic shared version.
+
+    - name: install-raylib
+      run:  |
+        sudo make install RAYLIB_LIBTYPE=SHARED
+
+    - name: raylib-lib-path
+      run:  |
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+
     - name: build
-      run: ./build/build-linux.sh
+      run: |
+        ./build/build-linux.sh
+
+    - name: clean-raylib
+      run:  |
+        rm -r raylib/
