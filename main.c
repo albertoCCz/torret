@@ -6,6 +6,9 @@
 
 #include <raylib.h>
 
+#include "grid.h"
+#include "persist.h"
+
 // #define DEBUG
 
 #define GRID_SIZE 40 // bug: when GRID_SIZE = {24, 25, 50},
@@ -37,23 +40,6 @@ typedef struct ModeText {
         .font_size = 20, \
         .title_len = MeasureText((const char *) #MODE " mode", 20) \
     };
-
-typedef enum TileState {
-    WALL,
-    NORMAL,
-    PATH_START,
-    PATH_END
-} TileState;
-
-typedef struct Grid {
-    int x;
-    int y;
-    int width;
-    int height;
-    size_t grid_size;
-    size_t grid_thick;
-    TileState *state;
-} Grid;
 
 void draw_grid_lines(Grid grid, Color color)
 {
@@ -288,8 +274,8 @@ int main(void)
     InitWindow(width, height, "Torret");
 
     // main objects
-    TileState *state = calloc(GRID_SIZE * GRID_SIZE, sizeof(TileState));
-    memset(state, WALL, sizeof(state)/sizeof(state[0]));
+    TileState *state = (TileState*)malloc(GRID_SIZE * GRID_SIZE * sizeof(TileState));
+    memset(state, (int)WALL, GRID_SIZE * GRID_SIZE * sizeof(TileState));
     Grid grid = {
         .x = 0,
         .y = 0,
@@ -342,32 +328,17 @@ int main(void)
 		set_search_tile(&start_tile, &end_tile, tile_selected, &grid);
 	    }
 
-	    //TODO: move saving map functionality to another modules
-	    if (IsKeyPressed(KEY_S)) {
-		FilePathList maps =  LoadDirectoryFilesEx("./maps", ".map", false);
+	    // TODO: move saving map functionality to another module
+	    if (IsKeyPressed(KEY_S)) { // Save Grid
 
-		printf("List of maps in ./maps/\n");
-		for (size_t i = 0; i < maps.count; ++i) {
-		    printf("    %s\n", maps.paths[i]);
-		}
-
-		const char* fileName = "./maps/map001.map";
-		FILE *file = fopen(fileName, "wb");
-
-		bool success;
-		unsigned int bytesToWrite = sizeof(grid.state)/sizeof(grid.state[0]);
-		if (file != NULL) {
-		    unsigned int count = (unsigned int)fwrite(grid.state, sizeof(unsigned char), bytesToWrite, file);
-
-		    if (count == 0) printf("FILEIO: [%s] Failed to write file\n", fileName);
-		    else if (count != bytesToWrite) printf("FILEIO: [%s] File partially written\n", fileName);
-		    else printf("FILEIO: [%s] File saved successfully\n", fileName);
-
-		    int result = fclose(file);
-		    if (result == 0) success = true;
-		}
-		else printf("FILEIO: [%s] Failed to open file\n", fileName);
+		// open file to save map
+		char* file_name = "./maps/map001.map";
+		save_grid(grid, file_name);
 	    }
+	    if (IsKeyPressed(KEY_L)) {
+		char* file_name = "./maps/map001.map";
+		load_grid(&grid, file_name);
+	    }	    
         }
 
         // If in search mode and click on grid tile, set target tile
