@@ -1,16 +1,30 @@
+#include <raylib.h>
+
+typedef struct Tile {
+    int x;
+    int y;
+} Tile;
+
 typedef enum TileState {
     WALL,
     NORMAL,
     PATH_START,
-    PATH_END
+    PATH_END,
+    PATH
 } TileState;
+
+typedef struct Map {
+    int w;
+    int h;
+    TileState *state;
+} Map;
 
 typedef struct Grid {
     int x;
     int y;
-    int width;
-    int height;
+    int w;
+    int h;
     size_t grid_size;
     size_t grid_thick;
-    TileState *state;
+    Map* map;
 } Grid;
