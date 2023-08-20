@@ -51,3 +51,45 @@ load_grid(Grid* grid, const char* file_name)
         return 1;
     }
 }
+
+int
+save_map(Map map, const char* file_name)
+{
+    
+    FILE* file = fopen(file_name, "wb");
+    if (file != NULL) {
+        size_t count = fwrite(&map.w, sizeof(map.w), 1, file);
+        count        = fwrite(&map.h, sizeof(map.h), 1, file);
+        count        = fwrite(map.state, sizeof(*map.state), map.w * map.h, file);
+
+        if (count == 0) printf("PERSIST: [%s] Didn't write anything to file\n", file_name);
+        else printf("PERSIST: [%s] Wrote %zu items to file\n", file_name, count);
+
+        fclose(file);
+        return 0;
+    } else {
+        printf("PERSIST: [%s] Couldn't open file to save map\n", file_name);
+        return 1;
+    }
+}
+
+int
+load_map(Map* map, const char* file_name)
+{
+    
+    FILE* file = fopen(file_name, "rb");
+    if (file != NULL) {
+        size_t count = fread(&map->w, sizeof(map->w), 1, file);
+        count        = fread(&map->h, sizeof(map->h), 1, file);
+        count        = fread(map->state, sizeof(*map->state), map->w * map->h, file);
+
+        if (count == 0) printf("PERSIST: [%s] Didn't read anything from file\n", file_name);
+        else printf("PERSIST: [%s] Read %zu items to file\n", file_name, count);
+
+        fclose(file);
+        return 0;
+    } else {
+        printf("PERSIST: [%s] Couldn't open file to load map\n", file_name);
+        return 1;
+    }
+}
